@@ -1,0 +1,57 @@
+name: CI
+
+# The project needs Xcode 26: it sets SWIFT_DEFAULT_ACTOR_ISOLATION and
+# SWIFT_APPROACHABLE_CONCURRENCY, which Xcode 16 does not understand, and it uses
+# the objectVersion 77 project format. macos-26 ships Xcode 26.6 as its default,
+# so there is no xcode-select step — pinning one would only add a way to break.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: macos-26
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+
+      # The app has no package dependencies, so there is nothing to resolve and
+      # nothing to cache. The Xcode build cache below is the only one that pays.
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project AppPocket/AppPocket.xcodeproj \
+            -scheme AppPocket \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+
+      # Only the unit-test target is run here. The UI-test target drives a real
+      # window and its two smoke tests have never been executed anywhere, so
+      # gating on them would mean gating on something unverified. Add
+      # `-only-testing:AppPocketUITests` once they have been shown to pass.
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project AppPocket/AppPocket.xcodeproj \
+            -scheme AppPocket \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -only-testing:AppPocketTests \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
