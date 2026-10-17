@@ -384,6 +384,19 @@ distributing it there would require a different discovery mechanism (a signed he
 inside a sandboxed container, or an app-scoped bookmark the user grants once at first
 launch). That trade is not made yet.
 
+### How the release image is signed
+
+`Tools/Release/make_dmg.sh` signs the bundle ad-hoc (`codesign --sign -`), keeping the
+hardened runtime the project already enables. There is no Developer ID Application
+certificate on the build machine, and that is the ceiling: an ad-hoc signature cannot be
+notarised, and Gatekeeper rejects it — `spctl --assess --type execute` on the mounted
+copy reports `rejected`. A downloader therefore has to approve the app once; the README
+documents both ways.
+
+The script reads `SIGN_IDENTITY` and `NOTARY_PROFILE`, so the day a Developer ID
+certificate exists the same command produces a notarised, stapled image with no change
+to the script. Nothing else in the pipeline knows which of the two it is.
+
 ---
 
 ## Testing and verification
@@ -461,6 +474,13 @@ saturation.
   (28 assertions, 0 failures), so the behaviour they assert is confirmed; what remains
   unconfirmed is that XCTest discovers and runs them. CI on a normal runner is the first
   place this will actually be exercised.
+- **The first-launch Gatekeeper path is only partly verified.** `spctl --assess --type
+  execute` on the mounted copy reports `rejected` — that is the verdict, and it is what
+  the ad-hoc signature predicts. Applying a quarantine attribute does make macOS run the
+  app from a randomised read-only copy under `AppTranslocation`, which was reproduced.
+  What could *not* be reproduced is the exact dialog a real downloader sees: the app had
+  already been launched on this machine, and Gatekeeper caches its per-app assessment.
+  The README therefore names both messages macOS may show rather than picking one.
 
 Everything else listed above was measured, not assumed.
 

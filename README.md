@@ -12,6 +12,39 @@ files and writes one JSON file.
 
 # English
 
+## Download
+
+**[Latest release →](../../releases/latest)**
+
+| | |
+|---|---|
+| Version | 1.0.0 |
+| Requires | macOS 14.0 or later |
+| Runs on | Apple silicon and Intel (universal) |
+| File | `AppPocket-1.0.0.dmg` |
+
+Open the disk image and drag **AppPocket** onto the **Applications** shortcut.
+
+### First launch
+
+The build is **ad-hoc signed, not notarised** — there is no paid Apple Developer
+account behind it. Gatekeeper rejects it (`spctl --assess` says so), so macOS will
+either refuse the first launch or quietly run the app from a randomised read-only
+copy. Either way the remedy is the same:
+
+1. **System Settings → Privacy & Security**, scroll to the **Security** section, and
+   click **Open Anyway** next to the AppPocket message. On macOS 14 and earlier,
+   right-clicking the app and choosing **Open** does the same thing.
+2. Or clear the flag the download attached:
+
+   ```
+   xattr -dr com.apple.quarantine /Applications/AppPocket.app
+   ```
+
+This is Gatekeeper doing its job on a build nobody has signed, not a sign that
+something is wrong with the app. If you would rather not trust a binary you cannot
+verify, build it yourself — see [Building](#building).
+
 ## What it does
 
 - **Every installed app**, from `/Applications`, `/System/Applications`,
@@ -62,7 +95,37 @@ xcodebuild -project AppPocket.xcodeproj -scheme AppPocket \
            CODE_SIGNING_ALLOWED=NO build
 ```
 
-Requires macOS 14.0+ and Xcode 26. There are no packages to resolve.
+Requires macOS 14.0+ and Xcode 26 or later. There are no packages to resolve.
+
+### Versioning
+
+`MARKETING_VERSION` in `AppPocket.xcodeproj` is the single source of truth for the
+version. It is `1.0.0`, and releases are tagged `v1.0.0`. The packaging script names
+the image after it and refuses to ship an image whose `CFBundleShortVersionString`
+disagrees, so the project, the tag and the filename cannot drift apart.
+
+`CURRENT_PROJECT_VERSION` is the build number. Bump it when you ship two builds of
+the same version, for instance a re-cut of a release that was already downloaded.
+
+### Packaging a disk image
+
+```
+Tools/Release/make_dmg.sh          # → dist/AppPocket-1.0.0.dmg
+```
+
+It builds Release for `generic/platform=macOS` — the destination is what makes the
+binary universal, and leaving it off silently produces an arm64-only app — signs the
+bundle, stages it beside an `/Applications` symlink, writes the image, then mounts
+that image and checks what actually landed in it. It fails rather than shipping a
+single-architecture build or a version that does not match the filename.
+
+`dist/` is gitignored: a disk image is a few megabytes of already-compiled binary
+that git cannot delta, so it belongs on the release page, not in the history.
+
+The script reads `SIGN_IDENTITY` and `NOTARY_PROFILE` if you have a Developer ID
+certificate and want a build that needs no Gatekeeper workaround. With neither set it
+signs ad-hoc, which is the honest ceiling for an unregistered open-source project.
+Both are documented at the top of the script.
 
 ### Tests
 
@@ -105,8 +168,16 @@ AppPocket/
 └── AppPocketUITests/             2 launch smoke tests
 ```
 
+Two tool directories sit outside the Xcode project:
+
+```
+Tools/
+├── Release/                     make_dmg.sh, dmg_layout.py — packaging
+└── UISnapshot/                  run.sh, verify.py — offscreen UI checks
+```
+
 `DESIGN_DOCUMENT.md` has the full architecture, the persistence format, and an
-[errata section](../DESIGN_DOCUMENT.md#errata) recording what the previous design
+[errata section](DESIGN_DOCUMENT.md#errata) recording what the previous design
 document got wrong.
 
 ## How it stores your data
@@ -141,6 +212,36 @@ MIT.
 ---
 
 # 中文
+
+## 下载
+
+**[最新版本 →](../../releases/latest)**
+
+| | |
+|---|---|
+| 版本 | 1.0.0 |
+| 系统要求 | macOS 14.0 或更高 |
+| 支持架构 | Apple 芯片与 Intel（通用二进制） |
+| 文件名 | `AppPocket-1.0.0.dmg` |
+
+打开磁盘映像，把 **AppPocket** 拖到 **Applications** 快捷方式上即可。
+
+### 首次启动
+
+这个构建是 **ad-hoc 签名、未经公证**的——背后没有付费的 Apple 开发者账号。Gatekeeper
+会拒绝它（`spctl --assess` 的结论就是 rejected），所以 macOS 要么拒绝首次启动，要么
+把它放到一个随机的只读副本里运行。两种情况下的解法相同：
+
+1. 打开**系统设置 → 隐私与安全性**，向下找到**安全性**一栏，在 AppPocket 的提示旁点
+   **仍要打开**。macOS 14 及更早版本上，右键点击应用选择**打开**效果相同。
+2. 或者清掉下载附带的隔离标记：
+
+   ```
+   xattr -dr com.apple.quarantine /Applications/AppPocket.app
+   ```
+
+这是 Gatekeeper 在尽它的职责，不代表应用本身有问题。如果你不愿意信任一个无法验证的
+二进制文件，可以自己构建——见[构建](#构建)。
 
 ## 功能
 
@@ -190,7 +291,35 @@ xcodebuild -project AppPocket.xcodeproj -scheme AppPocket \
            CODE_SIGNING_ALLOWED=NO build
 ```
 
-需要 macOS 14.0+ 与 Xcode 26。没有需要解析的依赖包。
+需要 macOS 14.0+ 与 Xcode 26 或更高版本。没有需要解析的依赖包。
+
+### 版本号
+
+`AppPocket.xcodeproj` 里的 `MARKETING_VERSION` 是版本号的唯一来源，当前为 `1.0.0`，
+发布标签对应 `v1.0.0`。打包脚本据此命名映像，并在映像内的
+`CFBundleShortVersionString` 与文件名不一致时拒绝产出——所以工程、标签、文件名三者
+不可能各自漂移。
+
+`CURRENT_PROJECT_VERSION` 是构建号。同一个版本需要出第二次构建时（例如某个已被下载的
+发布要重切）才递增。
+
+### 打包磁盘映像
+
+```
+Tools/Release/make_dmg.sh          # → dist/AppPocket-1.0.0.dmg
+```
+
+它按 Release 配置构建到 `generic/platform=macOS`——这个 destination 才是通用二进制的
+来源，去掉它会**静默**只产出 arm64；随后签名、把应用与 `/Applications` 符号链接一起
+暂存、生成映像，最后**挂载映像**核对里面到底装进了什么。产物不是通用架构、或版本号与
+文件名对不上时，脚本直接失败，而不是照常出货。
+
+`dist/` 已被 gitignore：磁盘映像就是几 MB 的已编译二进制，git 无法对它做增量，它该待
+在发布页面而不是版本历史里。
+
+如果你有 Developer ID 证书、想产出无需 Gatekeeper 绕行的构建，脚本会读取
+`SIGN_IDENTITY` 与 `NOTARY_PROFILE`。两者都不设时走 ad-hoc 签名——对一个没有注册
+开发者账号的开源项目来说，这就是诚实的天花板。两个变量的说明都在脚本开头。
 
 ### 测试
 
@@ -230,8 +359,16 @@ AppPocket/
 └── AppPocketUITests/             2 个启动冒烟测试
 ```
 
+Xcode 工程之外还有两个工具目录：
+
+```
+Tools/
+├── Release/                     make_dmg.sh、dmg_layout.py —— 打包
+└── UISnapshot/                  run.sh、verify.py —— 无头界面检查
+```
+
 完整的架构说明、持久化格式，以及记录上一版设计文档错在哪里的
-[勘误章节](../DESIGN_DOCUMENT.md#errata)，都在 `DESIGN_DOCUMENT.md` 里。
+[勘误章节](DESIGN_DOCUMENT.md#errata)，都在 `DESIGN_DOCUMENT.md` 里。
 
 ## 数据存在哪
 

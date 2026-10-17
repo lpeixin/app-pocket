@@ -184,3 +184,28 @@ docs/ui-snapshots/*.txt
 .qualityforge-*/
 *.verdicts.json
 
+# ---------------------------------------------------------------------------
+# Release artefacts
+#
+# Tools/Release/make_dmg.sh writes the disk image it builds into dist/. A DMG
+# is a few megabytes of already-compiled binary, which git cannot delta, so
+# committing it would put an unshrinkable blob in the history for every
+# release. It belongs on the GitHub release page, not in the tree.
+#
+# Ignoring it does not stop the script from working — it only stops the
+# output being committed by accident.
+# ---------------------------------------------------------------------------
+
+dist/
+
+# ---------------------------------------------------------------------------
+# Python bytecode
+#
+# Tools/Release and Tools/UISnapshot hold a few helper scripts. Importing one
+# leaves a __pycache__ beside it, which is a product of whichever interpreter
+# happened to run, not source.
+# ---------------------------------------------------------------------------
+
+__pycache__/
+*.py[cod]
+
