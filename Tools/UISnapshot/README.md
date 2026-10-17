@@ -12,6 +12,32 @@ programmatically** instead of eyeballing thumbnails.
 Output goes to `docs/ui-snapshots/` (generated; the PNGs and `verify.txt` are
 gitignored). The whole run takes a couple of minutes, most of it in `xcodebuild`.
 
+## README images
+
+The two screenshots in `README.md` come from the same probe, in a smaller run:
+
+```
+./readme_shots.sh
+```
+
+It builds and compiles once, then renders `all` and `editor` in both languages
+(`APPPOCKET_UI_PROBE_SEED_LANG` picks the language of the seeded category names,
+because the probe cannot read it from `Locale` — see the `-AppleLanguages` note
+below). `frame_shots.py` then adds rounded corners, a shadow and a light backdrop,
+and writes `docs/images/screenshot-{main,editor}-{en,zh}.jpg`.
+
+Two things differ from `run.sh`, both deliberate:
+
+- **Content only, not the theme frame.** Capturing the window frame also captures
+  the empty toolbar well and macOS 26's scroll-edge fade at the top of the content,
+  neither of which belongs to the app. The rounded corners in the README image are
+  drawn by `frame_shots.py` instead.
+- **JPEG, not PNG.** These are photographic (app icons, gradients); PNG is five
+  times the size for no visible gain at the width GitHub renders them.
+
+The banners are separate and live in `Tools/Branding/make_banner.py` — they are
+typography, so they are laid out in HTML and rasterised by headless Chrome.
+
 ## Requirements
 
 - **Xcode command line tools** — the script builds the app, then compiles the probe
@@ -104,6 +130,13 @@ and tiles them into one image.
 - **The probe must live inside the .app** (`Contents/MacOS/`) for `Bundle.main` to
   resolve the localizations. A bare binary elsewhere finds no `.lproj` and renders
   raw keys.
+- **The empty toolbar is load-bearing.** `render()` attaches an `NSToolbar` even
+  for views that put nothing in it. Without one, the window reports a provisional
+  84 pt title bar, `setContentSize` bakes that in, and the hosting view ends up
+  32 pt taller than requested — SwiftUI then draws the header under the title bar,
+  where the scroll-edge effect fades it out and the top of the content is clipped.
+  The same applies to the order of calls: lay the window out **before**
+  `setContentSize`, or the content size is computed from the provisional chrome.
 - **`-AppleLanguages '(zh-Hans)'` does not work.** It lands in `NSArgumentDomain`,
   while `CFBundle` reads the language list from the global preferences domain. The
   result is that `Locale.preferredLanguages` reports `zh-Hans` while the UI stays

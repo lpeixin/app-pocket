@@ -1,5 +1,7 @@
 # AppPocket
 
+![AppPocket — a local-only application launcher for macOS 26](docs/images/banner-en.jpg)
+
 A local-only application launcher for macOS 26, where Launchpad is no longer with us.
 
 No account, no network, no analytics, no third-party dependencies. It reads `Info.plist`
@@ -57,6 +59,20 @@ verify, build it yourself — see [Building](#building).
 - **Search** with relevance ranking, not a substring filter.
 - **Reachable without the Dock** — a menu bar extra and an optional global hot key.
 - **Six languages**: English, 简体中文, 日本語, Deutsch, Français, Español.
+
+### The launcher
+
+![AppPocket showing every installed app in a grid, with the smart groups and the user's own categories in the sidebar](docs/images/screenshot-main-en.jpg)
+
+Everything installed, in one grid, with the four computed smart groups and your own
+categories down the left. A dot under a tile means the app is already running.
+
+### Categories
+
+![The category editor: a name field, an SF Symbol picker, a colour palette, and a checklist of installed apps](docs/images/screenshot-editor-en.jpg)
+
+A category is a name, an SF Symbol, a colour and an ordered member list. The right-hand
+pane is where apps are ticked on and off — the same list the bulk-assign bar feeds into.
 
 ## Using it
 
@@ -172,8 +188,10 @@ Two tool directories sit outside the Xcode project:
 
 ```
 Tools/
+├── Branding/                    make_banner.py — the two README banners
 ├── Release/                     make_dmg.sh, dmg_layout.py — packaging
-└── UISnapshot/                  run.sh, verify.py — offscreen UI checks
+└── UISnapshot/                  run.sh, verify.py — offscreen UI checks,
+                                 readme_shots.sh, frame_shots.py — README images
 ```
 
 `DESIGN_DOCUMENT.md` has the full architecture, the persistence format, and an
@@ -212,6 +230,8 @@ MIT.
 ---
 
 # 中文
+
+![AppPocket —— 为 macOS 26 而生的本地应用启动器](docs/images/banner-zh.jpg)
 
 ## 下载
 
@@ -254,6 +274,20 @@ MIT.
 - **搜索**按相关度排序，不是简单的子串过滤。
 - **不必回到 Dock** —— 菜单栏图标，以及可选的全局快捷键。
 - **六种语言**：English、简体中文、日本語、Deutsch、Français、Español。
+
+### 启动器
+
+![AppPocket 主界面：所有已安装应用排成网格，左侧是智能分组与自定义分类](docs/images/screenshot-main-zh.jpg)
+
+所有已安装的应用都在一个网格里，左侧是四个实时计算的智能分组和你自己建的分类。
+图标下方有小圆点，表示这个应用正在运行。
+
+### 分类编辑
+
+![分类编辑面板：名称输入框、SF Symbol 图标选择器、颜色面板，以及已安装应用清单](docs/images/screenshot-editor-zh.jpg)
+
+一个分类由名称、SF Symbol 图标、颜色和一份可排序的成员列表组成。右侧这一栏就是勾选
+应用的地方，也是多选操作栏批量归类时的目标。
 
 ## 怎么用
 
@@ -363,8 +397,10 @@ Xcode 工程之外还有两个工具目录：
 
 ```
 Tools/
+├── Branding/                    make_banner.py —— 生成两张 README banner
 ├── Release/                     make_dmg.sh、dmg_layout.py —— 打包
-└── UISnapshot/                  run.sh、verify.py —— 无头界面检查
+└── UISnapshot/                  run.sh、verify.py —— 无头界面检查；
+                                 readme_shots.sh、frame_shots.py —— README 配图
 ```
 
 完整的架构说明、持久化格式，以及记录上一版设计文档错在哪里的

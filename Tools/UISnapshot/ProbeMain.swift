@@ -59,6 +59,11 @@ final class ProbeRunner {
     private let outputDirectory: URL
     private let size: NSSize
     private let appearance: NSAppearance?
+    /// Which language the seeded category names should be in. The probe cannot
+    /// infer it from `Locale`, because `readme_shots.sh` switches language by
+    /// swapping the bundle's root `Localizable.strings`, which `Locale` does not
+    /// see. Defaults to Chinese, matching run.sh's default.
+    private let seedLanguage: String
 
     private let catalog = AppCatalog()
     private let store: LibraryStore
@@ -73,6 +78,7 @@ final class ProbeRunner {
         self.outputDirectory = outputDirectory
         self.size = size
         self.appearance = appearance
+        self.seedLanguage = ProcessInfo.processInfo.environment["APPPOCKET_UI_PROBE_SEED_LANG"] ?? "zh"
 
         // Probe writes must never touch the real Application Support file.
         let work = FileManager.default.temporaryDirectory
@@ -115,8 +121,9 @@ final class ProbeRunner {
     /// Builds a deterministic, realistic-looking library out of whatever apps
     /// happen to be installed, so every run produces the same categories.
     private func seedLibrary() {
-        let recipes: [(name: String, symbol: String, keywords: [String])] = [
+        let recipes: [(en: String, zh: String, symbol: String, keywords: [String])] = [
             (
+                "Development",
                 "开发工具",
                 "chevron.left.forwardslash.chevron.right",
                 ["xcode", "terminal", "iterm", "visual studio", "vscode", "sublime",
@@ -124,6 +131,7 @@ final class ProbeRunner {
                  "postman", "insomnia", "simulator", "swift", "git", "warp", "zed"]
             ),
             (
+                "Design",
                 "设计与创意",
                 "paintbrush.pointed.fill",
                 ["figma", "sketch", "photoshop", "illustrator", "affinity", "pixelmator",
@@ -131,12 +139,14 @@ final class ProbeRunner {
                  "gimp", "inkscape", "color"]
             ),
             (
+                "Media",
                 "影音娱乐",
                 "play.rectangle.fill",
                 ["music", "spotify", "vlc", "iina", "quicktime", "podcast", "tv",
                  "netflix", "audacity", "handbrake", "elmedia", "game", "chess"]
             ),
             (
+                "Productivity",
                 "效率工具",
                 "checklist",
                 ["notes", "reminder", "calendar", "notion", "obsidian", "things",
@@ -144,6 +154,7 @@ final class ProbeRunner {
                  "1password", "numbers", "pages", "mail", "messages", "preview"]
             ),
             (
+                "Favourites",
                 "常用",
                 "star.fill",
                 ["activity monitor", "calculator", "chess", "clock", "dictionary",
@@ -158,6 +169,7 @@ final class ProbeRunner {
 
         var claimed: Set<String> = []
         for (index, recipe) in recipes.enumerated() {
+            let name = seedLanguage == "en" ? recipe.en : recipe.zh
             let members = sorted
                 .filter { app in
                     guard !claimed.contains(app.id) else { return false }
@@ -170,20 +182,20 @@ final class ProbeRunner {
             members.forEach { claimed.insert($0) }
 
             let category = try? store.createCategory(
-                name: recipe.name,
+                name: name,
                 symbolName: recipe.symbol,
                 colorHex: AppCategory.palette[index % AppCategory.palette.count],
                 appIDs: members
             )
             if let category {
-                categoriesByRecipe[recipe.name] = category.id
-                log("category \(recipe.name): \(members.count) apps")
+                categoriesByRecipe[name] = category.id
+                log("category \(name): \(members.count) apps")
             }
         }
 
         // One deliberately empty category so the empty state is reviewable.
         if let empty = try? store.createCategory(
-            name: "待整理",
+            name: seedLanguage == "en" ? "Inbox" : "待整理",
             symbolName: "tray.full.fill",
             colorHex: AppCategory.palette[6 % AppCategory.palette.count],
             appIDs: []
@@ -209,7 +221,7 @@ final class ProbeRunner {
     /// A category whose members sort near the top of the alphabet, so the
     /// editor/picker snapshots actually show checked rows without scrolling.
     private var earlyAlphabetCategoryID: UUID? {
-        categoriesByRecipe["常用"]
+        categoriesByRecipe[seedLanguage == "en" ? "Favourites" : "常用"]
     }
 
     // MARK: - States
@@ -339,12 +351,23 @@ final class ProbeRunner {
             defer: false
         )
         window.appearance = appearance
+        // Attach a toolbar even though the launcher does not put anything in it.
+        // Without one, the window reports a provisional 84 pt title bar, the
+        // hosting view ends up 32 pt taller than asked for, and SwiftUI draws the
+        // header under the title bar where macOS 26's scroll-edge effect fades it
+        // out — none of which matches what the app actually looks like.
         window.toolbar = NSToolbar(identifier: "AppPocketProbeToolbar")
         window.toolbarStyle = .unified
 
         let hosting = NSHostingView(rootView: root)
         hosting.frame = frame
         window.contentView = hosting
+        // Let the window work out its chrome before asking for a content size.
+        // `setContentSize` bakes in whatever title-bar height is current, and a
+        // window that has never laid out reports a provisional one — which left
+        // the content 32 pt taller than requested and cut the last grid row in
+        // half.
+        window.layoutIfNeeded()
         window.setContentSize(contentSize)
         window.layoutIfNeeded()
         hosting.layoutSubtreeIfNeeded()
